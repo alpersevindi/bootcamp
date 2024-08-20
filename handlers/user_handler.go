@@ -9,8 +9,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var users = map[uuid.UUID]models.User{}
-
 func CreateUser(db *sql.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		user := new(models.User)
@@ -18,9 +16,15 @@ func CreateUser(db *sql.DB) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 
+		if err := c.Validate(user); err != nil {
+			return c.JSON(http.StatusUnprocessableEntity, err.Error())
+		}
+
 		user.UUID = uuid.New()
 
-		_, err := db.Exec("INSERT INTO users (uuid, name, surname) VALUES (?, ?, ?)", user.UUID, user.Name, user.Surname)
+		_, err := db.Exec("INSERT INTO users (uuid, name, surname, email) VALUES (?, ?, ?, ?)",
+			user.UUID, user.Name, user.Surname, user.Email)
+
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
@@ -37,8 +41,8 @@ func GetUser(db *sql.DB) echo.HandlerFunc {
 		}
 
 		var user models.User
-		err = db.QueryRow("SELECT uuid, name, surname FROM users WHERE uuid = ?", id).
-			Scan(&user.UUID, &user.Name, &user.Surname)
+		err = db.QueryRow("SELECT uuid, name, surname, email FROM users WHERE uuid = ?", id).
+			Scan(&user.UUID, &user.Name, &user.Surname, &user.Email)
 
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -49,13 +53,6 @@ func GetUser(db *sql.DB) echo.HandlerFunc {
 
 		return c.JSON(http.StatusOK, user)
 	}
-}
-
-func GetUsers(c echo.Context) error {
-	if len(users) == 0 {
-		return c.JSON(http.StatusNotFound, "There is no user")
-	}
-	return c.JSON(http.StatusOK, users)
 }
 
 func UpdateUser(db *sql.DB) echo.HandlerFunc {
@@ -70,9 +67,14 @@ func UpdateUser(db *sql.DB) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 
+		if err := c.Validate(user); err != nil {
+			return c.JSON(http.StatusUnprocessableEntity, err.Error())
+		}
+
 		user.UUID = id
 
-		_, err = db.Exec("UPDATE users SET name = ?, surname = ? WHERE uuid = ?", user.Name, user.Surname, user.UUID)
+		_, err = db.Exec("UPDATE users SET name = ?, surname = ?, email = ? WHERE uuid = ?",
+			user.Name, user.Surname, user.Email, user.UUID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}

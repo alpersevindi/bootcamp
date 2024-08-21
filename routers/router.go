@@ -2,14 +2,14 @@ package routers
 
 import (
 	"bootcamp/handlers"
+	"database/sql"
 
 	"github.com/labstack/echo/v4"
 )
 
-func InitRoutes(e *echo.Echo) {
-	e.POST("/user", handlers.CreateUser)
-	e.GET("/user/:id", handlers.GetUser)
-	e.GET("/users", handlers.GetUsers)
-	e.PUT("/user/:id", handlers.UpdateUser)
-	e.DELETE("/user/:id", handlers.DeleteUser)
+func InitRoutes(e *echo.Echo, db *sql.DB) {
+	e.POST("/user", handlers.CreateUser(db))
+	e.GET("/user/:id", handlers.GetUser(db))
+	e.PUT("/user/:id", handlers.UpdateUser(db))
+	e.DELETE("/user/:id", handlers.DeleteUser(db))
 }

@@ -2,70 +2,99 @@ package handlers
 
 import (
 	"bootcamp/models"
+	"database/sql"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
-var users = map[uuid.UUID]models.User{}
+func CreateUser(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user := new(models.User)
+		if err := c.Bind(user); err != nil {
+			return c.JSON(http.StatusBadRequest, err.Error())
+		}
 
-func CreateUser(c echo.Context) error {
-	user := new(models.User)
-	if err := c.Bind(user); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		if err := c.Validate(user); err != nil {
+			return c.JSON(http.StatusUnprocessableEntity, err.Error())
+		}
+
+		user.UUID = uuid.New()
+
+		_, err := db.Exec("INSERT INTO users (uuid, name, surname, email) VALUES (?, ?, ?, ?)",
+			user.UUID, user.Name, user.Surname, user.Email)
+
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+
+		return c.JSON(http.StatusCreated, user)
 	}
-	user.UUID = uuid.New()
-	users[user.UUID] = *user
-	return c.JSON(http.StatusCreated, user)
 }
 
-func GetUser(c echo.Context) error {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, "Invalid UUID")
-	}
+func GetUser(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id, err := uuid.Parse(c.Param("id"))
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, "Invalid UUID")
+		}
 
-	user, exists := users[id]
-	if !exists {
-		return c.JSON(http.StatusNotFound, "User not found")
+		var user models.User
+		err = db.QueryRow("SELECT uuid, name, surname, email FROM users WHERE uuid = ?", id).
+			Scan(&user.UUID, &user.Name, &user.Surname, &user.Email)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return c.JSON(http.StatusNotFound, "User not found")
+			}
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+
+		return c.JSON(http.StatusOK, user)
 	}
-	return c.JSON(http.StatusOK, user)
 }
 
-func GetUsers(c echo.Context) error {
-	if len(users) == 0 {
-		return c.JSON(http.StatusNotFound, "There is no user")
+func UpdateUser(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id, err := uuid.Parse(c.Param("id"))
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, "Invalid UUID")
+		}
+
+		user := new(models.User)
+		if err := c.Bind(user); err != nil {
+			return c.JSON(http.StatusBadRequest, err.Error())
+		}
+
+		if err := c.Validate(user); err != nil {
+			return c.JSON(http.StatusUnprocessableEntity, err.Error())
+		}
+
+		user.UUID = id
+
+		_, err = db.Exec("UPDATE users SET name = ?, surname = ?, email = ? WHERE uuid = ?",
+			user.Name, user.Surname, user.Email, user.UUID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+
+		return c.JSON(http.StatusOK, user)
 	}
-	return c.JSON(http.StatusOK, users)
 }
 
-func UpdateUser(c echo.Context) error {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, "Invalid UUID")
-	}
-	if _, exists := users[id]; !exists {
-		return c.JSON(http.StatusNotFound, "User not found")
-	}
+func DeleteUser(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id, err := uuid.Parse(c.Param("id"))
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, "Invalid UUID")
+		}
 
-	user := new(models.User)
-	if err := c.Bind(user); err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-	user.UUID = id
-	users[id] = *user
-	return c.JSON(http.StatusOK, user)
-}
+		_, err = db.Exec("DELETE FROM users WHERE uuid = ?", id)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
 
-func DeleteUser(c echo.Context) error {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, "Invalid UUID")
+		return c.NoContent(http.StatusNoContent)
 	}
-	if _, exists := users[id]; !exists {
-		return c.JSON(http.StatusNotFound, "User not found")
-	}
-	delete(users, id)
-	return c.NoContent(http.StatusNoContent)
 }

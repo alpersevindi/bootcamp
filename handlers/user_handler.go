@@ -102,6 +102,7 @@ func UpdateUser(db *sql.DB, rdb *redis.Client) echo.HandlerFunc {
 }
 
 func DeleteUser(db *sql.DB, rdb *redis.Client) echo.HandlerFunc {
+	//TEST
 	return func(c echo.Context) error {
 		userId := c.Param("id")
 		id, err := uuid.Parse(userId)

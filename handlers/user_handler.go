@@ -34,6 +34,10 @@ func CreateUser(db *sql.DB) echo.HandlerFunc {
 }
 
 func GetUser(db *sql.DB) echo.HandlerFunc {
+	/*
+
+		Test Commit
+	*/
 	return func(c echo.Context) error {
 		id, err := uuid.Parse(c.Param("id"))
 		if err != nil {
@@ -78,6 +82,11 @@ func UpdateUser(db *sql.DB) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
+
+		/*
+
+			Test Commit
+		*/
 
 		return c.JSON(http.StatusOK, user)
 	}

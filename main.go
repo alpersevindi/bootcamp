@@ -16,8 +16,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	rdb := database.InitRedis()
+
 	e := echo.New()
 	e.Validator = &models.CustomValidator{Validator: validator.New()}
-	routers.InitRoutes(e, db)
+	routers.InitRoutes(e, db, rdb)
 	e.Logger.Fatal(e.Start(":8080"))
 }

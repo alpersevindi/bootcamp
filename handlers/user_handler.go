@@ -45,8 +45,8 @@ func GetUser(db *sql.DB, rdb *redis.Client) echo.HandlerFunc {
 		cachedUser, err := rdb.Get(ctx, id).Result()
 		if err == redis.Nil {
 			var user models.User
-			err := db.QueryRow("SELECT uuid, name, surname FROM users WHERE uuid = ?", id).
-				Scan(&user.UUID, &user.Name, &user.Surname)
+			err := db.QueryRow("SELECT uuid, name, surname, email FROM users WHERE uuid = ?", id).
+				Scan(&user.UUID, &user.Name, &user.Surname, &user.Email)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return c.JSON(http.StatusNotFound, "User not found")
